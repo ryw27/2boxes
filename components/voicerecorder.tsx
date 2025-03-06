@@ -1,26 +1,39 @@
 'use client';
 import React, { useState, useRef, useEffect }  from 'react';
-import { Mic } from 'lucide-react' 
-import { pipeline } from '@huggingface/transformers';
+import { Mic } from 'lucide-react';
+import { pipeline } from '@xenova/transformers';
 
 interface VoiceRecorderProps {
     updateInterval?: number;
 }
-export const VoiceRecorder = ({
-    updateInterval = 30000
-}: VoiceRecorderProps) => {
-    const [transcription, setTranscription] = useState<string>('');
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ 
+    updateInterval = 30000 
+}) => {
+    const [transcript, setTranscript] = useState<string>('');
     const [isRecording, setIsRecording] = useState<boolean>(false);
+
     const whisper = useRef<any>(null);
     const mediaRecorder = useRef<MediaRecorder | null>(null);
     const audioChunks = useRef<Blob[]>([]);
     
+    // useEffect (() => {
+    //     const loadmodel = async () => {
+    //         whisper.current = new Worker(new URL('./worker.ts', import.meta.url), {
+    //             type: 'module'
+    //         });
+    //         // whisper.current = await pipeline('automatic-speech-recognition','openai/whisper-small');
+    //     }
+    //     loadmodel();
+    // }, [])
+
+    // Using web workers
     useEffect (() => {
-        const loadmodel = async () => {
-            whisper.current = await pipeline('automatic-speech-recognition','openai/whisper-small');
+        if (!whisper.current) {
+            whisper.current = new window.Worker(new URL('../lib/worker.ts', import.meta.url)), {
+                type: 'module'
+            };
         }
-        loadmodel();
-    }, [])
+    })
 
     const startRecording = async () => {
         try {
@@ -31,29 +44,56 @@ export const VoiceRecorder = ({
             }
             mediaRecorder.current.start; 
             setInterval(() => {
-               //todo 
-            })
+                const audioBlob = new Blob(audioChunks.current, {type: 'audio/mpeg'})
+                audioChunks.current = [] //reset to empty
+                processAudio(audioBlob);
+            }, updateInterval)
             setIsRecording(true);
         } catch (error) {
             console.error("Error: ", error);
         }
     }
-    const processAudio = async () => {
+
+    const processAudio = async (audioBlob : Blob) => {
         //todo
+        if (whisper.current) {
+            try {
+                const audioArray = await audioBlob.arrayBuffer();
+                const output = await whisper.current({
+                    audio: new Uint8Array(audioArray),
+                    language: "english"
+                });
+                setTranscript((prev) => {
+                    const newTranscript = prev + " " + (output.text);
+                    return newTranscript;
+                }); 
+
+            } catch (error) {
+                console.error("Error in transcribing audio", error);
+            }
+       } else {
+            console.error("Whisper not loaded");
+        }
+
     }
+
     const stopRecording = () => {
         if (mediaRecorder.current) {
             mediaRecorder.current.stop();
-            //todo
+            setIsRecording(false);
+            const audioBlob = new Blob(audioChunks.current, {type: 'audio/mpeg'})
+            audioChunks.current = [] //reset to empty
+            processAudio(audioBlob);
         }
     }
 
     return (
-        <div className="rounded-md bg-red-400">
-            <button onClick={isRecording ? stopRecording : startRecording} 
-                className={`rounded-full bg-red-400 items-center justify-center ${isRecording ? 'animate-pulse' : ''}`}>
-                    <Mic/>
-                </button>
-        </div>
+        <button onClick={isRecording ? stopRecording : startRecording} 
+            className={`flex py-3 px-5 gap-4 rounded-md text-white 
+                    bg-red-400 items-center justify-center ${isRecording ? 'animate-pulse' : ''}`}>
+            <Mic/> Start Recording 
+        </button>
     );
 }
+
+export default VoiceRecorder
