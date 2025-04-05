@@ -1,55 +1,67 @@
 'use client';
-import React, { useState, useRef, useEffect }  from 'react';
+import React, { useState, useEffect } from 'react';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { streamText } from 'ai';
 
-interface Props {
-    initialText: string;
-    text: string;
-    setText: (text: string) => void;
-}
+export default function OutputBox() {
+    const [input, setInput] = useState('');
+    const [output, setOutput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-export default function OutputBox({initialText, text, setText} : Props) {
-    const [isEditing, setIsEditing] = useState<boolean>(false);
-    const [loading, setLoading] = useState<boolean>(true);
-    
-    const handleEditClick = () => {
-        setIsEditing(true);
-    };
-
-    const handleBlur = () => {
-        setIsEditing(false);
-        setLoading(true);
+    const handleSummarize = async () => {
+        if (!input.trim()) return;
+        
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/summarize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: input }),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to summarize');
+            }
+            
+            const data = await response.json();
+            setOutput(data.summary);
+        } catch (error) {
+            console.error('Error:', error);
+            setOutput('Failed to process your request.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <>
-            <div className="relative rounded-lg shadow-md">
-                <textarea 
-                    className="w-full min-h-[40px] border p-2 rounded-md focus:outline-blue-500"
-                    disabled={!isEditing}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement
-                        target.style.height = 'auto';
-                        target.style.height = `${target.scrollHeight}px`
-                    }}
-                    onBlur={handleBlur}
-                />
-                {!isEditing && (
-                    <button 
-                        className="absolute top-2 right-2 px-4 py-2 bg-blue-500 text-white rounded-md" 
-                        onClick={handleEditClick}
-                    >
-                        Edit
-                    </button>
-                )}
-                {/* {loading && (
-                    <div className="absolute bottom-0 left-2 right-2 space-y-2">
-                        <div className="h-4 bg-gray-300 animate-pulse rounded-md w-3/4" />
-                        <div className="h-4 bg-gray-300 animate-pulse rounded-md w-3/4" />
-                    </div>
-                )} */}
-            </div>
-        </>
+        <div className="flex flex-col w-full max-w-4xl mx-auto p-4 space-y-4 bg-white rounded-lg border-2 border-gray-200">
+            <h2 className="text-xl font-bold">Summarizer</h2>
+            
+            <textarea 
+                className="w-full p-2 border-2 border-gray-300 rounded-md min-h-[150px]"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Enter text to summarize..."
+            />
+            
+            <button 
+                onClick={handleSummarize}
+                disabled={isLoading || !input.trim()}
+                className={`py-2 px-4 rounded-md text-white ${isLoading || !input.trim() 
+                    ? 'bg-gray-400' 
+                    : 'bg-blue-500 hover:bg-blue-600'}`}
+            >
+                {isLoading ? 'Processing...' : 'Summarize'}
+            </button>
+            
+            {output && (
+                <div className="mt-4 p-4 border-2 border-gray-200 rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-2">Summary:</h3>
+                    <p>{output}</p>
+                </div>
+            )}
+        </div>
     );
 }
