@@ -102,8 +102,8 @@ It would be fatal for the nation to overlook the urgency of the moment. This swe
 						}} */}
 					{/* /> */}
 				</div>
-				<div className="flex flex-col">
-					<p className="text-4xl mt-6">Output Box</p>
+				<div className="flex flex-col mt-6">
+					<p className="text-4xl mt-6 mb-4">Output Box</p>
 					<OutputBox 
 						output={output}
 						setOutput={setOutput}

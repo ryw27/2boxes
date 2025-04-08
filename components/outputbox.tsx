@@ -1,12 +1,21 @@
 'use client';
-import React, { useState } from 'react';
-// import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-// import { streamText } from 'ai';
+import React, { useEffect, useState } from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import type { Element } from 'hast';
 
 interface Props {
     output : string;    
     setOutput : (output : string) => void;
 }
+
+interface MarkdownNode extends Element {
+    parent?: {
+        type: string;
+    };
+}
+
 export default function OutputBox({ output, setOutput } : Props) {
     
     // const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +47,31 @@ export default function OutputBox({ output, setOutput } : Props) {
     //         setIsLoading(false);
     //     }
     // };
+    useEffect(() => {
+        console.log('output:', output);
+    }, [output]);
+
+    // Clean and format the markdown
+    const cleanOutput = output
+        .split('\n')
+        .map(line => {
+            // Fix bullet point indentation
+            if (line.trim().startsWith('-')) {
+                const leadingSpaces = line.match(/^\s*/)?.[0] || '';
+                const indent = leadingSpaces.length;
+                // Ensure proper indentation for nested lists
+                if (indent >= 2) {
+                    return '  ' + line.trim();
+                }
+                return line.trim();
+            }
+            return line;
+        })
+        .join('\n');
 
     return (
-        <div className="flex flex-col w-full max-w-4xl mx-auto p-4 space-y-4 bg-white rounded-lg border-2 border-gray-200">
-            <h2 className="text-xl font-bold">Summarizer</h2>
+         <div> 
+            {/* <h2 className="text-xl font-bold">Summarizer</h2> */}
             
             {/* <textarea 
                 className="w-full p-2 border-2 border-gray-300 rounded-md min-h-[150px]"
@@ -59,11 +89,26 @@ export default function OutputBox({ output, setOutput } : Props) {
             >
                 {isLoading ? 'Processing...' : 'Summarize'}
             </button> */}
-            
+        
             {output && (
                 <div className="mt-4 p-4 border-2 border-gray-200 rounded-md bg-gray-50">
-                    <h3 className="text-lg font-semibold mb-2">Summary:</h3>
-                    <p>{output}</p>
+                    <div>
+                        <h1 className="text-lg font-semibold mb-2">Summary:</h1>
+                        <Markdown 
+                            remarkPlugins={[remarkGfm]} 
+                            rehypePlugins={[rehypeRaw]}
+                            // components={{
+                            //     ul: ({children}) => (
+                            //         <ul className="space-y-1">{children}</ul>
+                            //     ),
+                            //     li: ({children}) => (
+                            //         <li className="ml-4">{children}</li>
+                            //     )
+                            // }}
+                        >
+                            {cleanOutput}
+                        </Markdown>
+                    </div>
                 </div>
             )}
         </div>

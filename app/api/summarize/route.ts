@@ -39,15 +39,17 @@ export async function POST(req: Request) {
         // :\n\n${text}`,
         //         });
         
-        
         const { response } = await generateText({
             model: openrouter('deepseek/deepseek-chat-v3-0324:free'),
             prompt: `
-      Given the below brainstorming process, can you organize the thoughts into conceptual topics? Be sure to keep the original phrasing, but just add nested headings and subheadings.
+      Given the below brainstorming process, 
+      organize the thoughts into numbered conceptual topics. 
+      Add nested headings and subheadings for clarity.
+      Do not add your commentary.
   :\n\n${text}`,
         }); 
         
-        console.log('Full text:', response);
+        // console.log('Full text:', response);
         return NextResponse.json({ response });
     } catch (error) {
         console.error('Error in summarize route:', error);
